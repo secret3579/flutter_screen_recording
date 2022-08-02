@@ -9,13 +9,43 @@ class FlutterScreenRecording {
 
   static Future<bool> startRecordScreen(String name, {String? titleNotification, String? messageNotification}) async {
     await _maybeStartFGS(titleNotification, messageNotification);
-    final bool start = await _channel.invokeMethod('startRecordScreen', {"name": name, "audio": false});
+    final bool start = await _channel.invokeMethod('startRecordScreen', {
+      "name": name,
+      "audioMic": false,
+      "audioApp": false,
+      "audio": false, //for android
+    });
     return start;
   }
 
-  static Future<bool> startRecordScreenAndAudio(String name, {String? titleNotification, String? messageNotification}) async {
+  static Future<bool> startRecordScreenWithAudioMic(String name, {String? titleNotification, String? messageNotification}) async {
     await _maybeStartFGS(titleNotification, messageNotification);
-    final bool start = await _channel.invokeMethod('startRecordScreen', {"name": name, "audio": true});
+    final bool start = await _channel.invokeMethod('startRecordScreen', {
+      "name": name,
+      "audioMic": true,
+      "audioApp": false,
+    });
+    return start;
+  }
+
+  static Future<bool> startRecordScreenWithAudioApp(String name, {String? titleNotification, String? messageNotification}) async {
+    await _maybeStartFGS(titleNotification, messageNotification);
+    final bool start = await _channel.invokeMethod('startRecordScreen', {
+      "name": name,
+      "audioMic": false,
+      "audioApp": true,
+    });
+    return start;
+  }
+
+  static Future<bool> startRecordScreenWithAllOfAudio(String name, {String? titleNotification, String? messageNotification}) async {
+    await _maybeStartFGS(titleNotification, messageNotification);
+    final bool start = await _channel.invokeMethod('startRecordScreen', {
+      "name": name,
+      "audioMic": true,
+      "audioApp": true,
+      "audio": true, //for android
+    });
     return start;
   }
 

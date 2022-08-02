@@ -10,10 +10,12 @@ public class SwiftFlutterScreenRecordingPlugin: NSObject, FlutterPlugin {
 var videoOutputURL : URL?
 var videoWriter : AVAssetWriter?
 
-var audioInput:AVAssetWriterInput!
+var audioMicInput:AVAssetWriterInput!
+var audioAppInput:AVAssetWriterInput!
 var videoWriterInput : AVAssetWriterInput?
 var nameVideo: String = ""
-var recordAudio: Bool = false;
+var recordAudioMic: Bool = false;
+var recordAudioApp: Bool = false;
 var myResult: FlutterResult?
     
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -28,7 +30,8 @@ var myResult: FlutterResult?
          myResult = result
          let args = call.arguments as? Dictionary<String, Any>
          
-         self.recordAudio = (args?["audio"] as? Bool)!
+         self.recordAudioMic = (args?["audioMic"] as? Bool)!
+         self.recordAudioApp = (args?["audioApp"] as? Bool)!
          self.nameVideo = (args?["name"] as? String)!+".mp4"
          startRecording()
 
@@ -68,7 +71,7 @@ var myResult: FlutterResult?
 
         //Create the video and audio settings
         if #available(iOS 11.0, *) {
-            recorder.isMicrophoneEnabled = recordAudio
+            recorder.isMicrophoneEnabled = recordAudioMic
             
             let videoSettings: [String : Any] = [
                 AVVideoCodecKey  : AVVideoCodecH264,
@@ -85,7 +88,7 @@ var myResult: FlutterResult?
             self.videoWriterInput?.expectsMediaDataInRealTime = true;
             self.videoWriter?.add(videoWriterInput!);
                         
-            if(recordAudio){
+            if(recordAudioMic) {
                 let audioOutputSettings: [String : Any] = [
                     AVNumberOfChannelsKey : 2,
                     AVFormatIDKey : kAudioFormatMPEG4AAC,
@@ -93,9 +96,22 @@ var myResult: FlutterResult?
                     AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
                 ]
                 //Create the asset writer input object which is actually used to write out the audio
-                self.audioInput = AVAssetWriterInput(mediaType: AVMediaType.audio, outputSettings: audioOutputSettings)
-                self.audioInput?.expectsMediaDataInRealTime = true;
-                self.videoWriter?.add(audioInput!);
+                self.audioMicInput = AVAssetWriterInput(mediaType: AVMediaType.audio, outputSettings: audioOutputSettings)
+                self.audioMicInput?.expectsMediaDataInRealTime = true;
+                self.videoWriter?.add(audioMicInput!);
+            }
+
+            if(recordAudioApp) {
+                let audioOutputSettings: [String : Any] = [
+                    AVNumberOfChannelsKey : 2,
+                    AVFormatIDKey : kAudioFormatMPEG4AAC,
+                    AVSampleRateKey: 44100,
+                    AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+                ]
+                //Create the asset writer input object which is actually used to write out the audio
+                self.audioAppInput = AVAssetWriterInput(mediaType: AVMediaType.audio, outputSettings: audioOutputSettings)
+                self.audioAppInput?.expectsMediaDataInRealTime = true;
+                self.videoWriter?.add(audioAppInput!);
             }
         }
 
@@ -127,15 +143,26 @@ var myResult: FlutterResult?
                             }
                         }
                     case RPSampleBufferType.audioMic:
-                        if(self.recordAudio){
+                        if(self.recordAudioMic){
                             print("Writing audio....");
-                            if self.audioInput?.isReadyForMoreMediaData == true {
+                            if self.audioMicInput?.isReadyForMoreMediaData == true {
                                 print("starting audio....");
-                                if self.audioInput?.append(cmSampleBuffer) == false {
+                                if self.audioMicInput?.append(cmSampleBuffer) == false {
                                         print("Problems writing audio")
                                 }
                             }
                         }
+                    case RPSampleBufferType.audioApp:
+                        if(self.recordAudioApp){
+                            print("Writing audio....");
+                            if self.audioAppInput?.isReadyForMoreMediaData == true {
+                                print("starting audio....");
+                                if self.audioAppInput?.append(cmSampleBuffer) == false {
+                                    print("Problems writing audio")
+                                }
+                            }
+                        }
+
                     default:
                        print("not a video sample, so ignore");
                     }
@@ -163,8 +190,11 @@ var myResult: FlutterResult?
         }
 
         self.videoWriterInput?.markAsFinished();
-        if(self.recordAudio) {
-             self.audioInput?.markAsFinished();
+        if(self.recordAudioMic) {
+             self.audioMicInput?.markAsFinished();
+        }
+        if(self.recordAudioApp) {
+            self.audioAppInput?.markAsFinished();
         }
 
         self.videoWriter?.finishWriting {
