@@ -34,6 +34,7 @@ class FlutterScreenRecording {
       "name": name,
       "audioMic": false,
       "audioApp": true,
+      "audio": true, // for android
     });
     return start;
   }

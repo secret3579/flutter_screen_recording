@@ -138,7 +138,7 @@ class FlutterScreenRecordingPlugin(
         mMediaRecorder?.setVideoSource(MediaRecorder.VideoSource.SURFACE)
         // This has to come before setOutputFormat
         if (recordAudio!!) {
-            mMediaRecorder?.setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION);
+            mMediaRecorder?.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         }
 
         mMediaRecorder?.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
