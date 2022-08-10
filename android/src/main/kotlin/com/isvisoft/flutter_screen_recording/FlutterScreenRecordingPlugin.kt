@@ -37,7 +37,7 @@ class FlutterScreenRecordingPlugin(
     var mVirtualDisplay: VirtualDisplay? = null
     var mDisplayWidth: Int = 1280
     var mDisplayHeight: Int = 720
-    var storePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).absolutePath + File.separator
+    var storePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).absolutePath + File.separator
     var videoName: String? = ""
     var recordAudio: Boolean? = false;
     private val SCREEN_RECORD_REQUEST_CODE = 333
