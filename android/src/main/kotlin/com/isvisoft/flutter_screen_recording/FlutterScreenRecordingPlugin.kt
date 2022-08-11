@@ -186,6 +186,7 @@ class FlutterScreenRecordingPlugin(
 
             mMediaRecorder?.stop()
             mMediaRecorder?.reset()
+            scanMedia();
             println("stopRecordScreen success")
 
         } catch (e: Exception) {
@@ -221,6 +222,9 @@ class FlutterScreenRecordingPlugin(
             }
             Log.d("TAG", "MediaProjection Stopped")
         }
+    }
+    private fun scanMedia(){
+        SingleMediaScanner(registrar.context(), File("${storePath}${videoName}.mp4"));
     }
 
     inner class MediaProjectionCallback : MediaProjection.Callback() {
