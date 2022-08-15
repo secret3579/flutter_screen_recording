@@ -35,6 +35,20 @@ class FlutterScreenRecording {
       "audioMic": false,
       "audioApp": true,
       "audio": true, // for android
+      "delayDuration": 0,
+    });
+    return start;
+  }
+
+  static Future<bool> startRecordScreenWithAudioAppAndDelay(String name, double delayDuration,
+      {String? titleNotification, String? messageNotification}) async {
+    await _maybeStartFGS(titleNotification, messageNotification);
+    final bool start = await _channel.invokeMethod('startRecordScreen', {
+      "name": name,
+      "audioMic": false,
+      "audioApp": true,
+      "audio": true, // for android
+      "delayDuration": delayDuration,
     });
     return start;
   }
