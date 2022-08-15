@@ -3,17 +3,19 @@ package com.isvisoft.flutter_screen_recording
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Point
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
 import androidx.core.app.ActivityCompat
-import io.flutter.app.FlutterApplication
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -22,12 +24,12 @@ import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.common.PluginRegistry.Registrar
 import java.io.File
 import java.io.IOException
-import android.graphics.Point
+
 
 class FlutterScreenRecordingPlugin(
-        private val registrar: Registrar
+    private val registrar: Registrar
 ) : MethodCallHandler,
-        PluginRegistry.ActivityResultListener {
+    PluginRegistry.ActivityResultListener {
 
     var mScreenDensity: Int = 0
     var mMediaRecorder: MediaRecorder? = null
@@ -37,6 +39,7 @@ class FlutterScreenRecordingPlugin(
     var mVirtualDisplay: VirtualDisplay? = null
     var mDisplayWidth: Int = 1280
     var mDisplayHeight: Int = 720
+    var mDelay: Long = 300
     var storePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).absolutePath + File.separator
     var videoName: String? = ""
     var recordAudio: Boolean? = false;
@@ -60,13 +63,27 @@ class FlutterScreenRecordingPlugin(
             if (resultCode == Activity.RESULT_OK) {
                 //initMediaRecorder();
 
-                mMediaProjectionCallback = MediaProjectionCallback()
-                mMediaProjection = mProjectionManager?.getMediaProjection(resultCode, data!!)
-                mMediaProjection?.registerCallback(mMediaProjectionCallback, null)
-                mVirtualDisplay = createVirtualDisplay()
+                val handler = Handler(Looper.getMainLooper())
+                handler.postDelayed({
+                    try {
+                        //mMediaRecorder?.prepare()
+                        mMediaRecorder?.start()
+                    } catch (e: IOException) {
+                        println("ERR");
+                        Log.d("--INIT-RECORDER", "MediaProjection Start stop")
+                        println("Error startRecordScreen")
+                        println(e.message)
+                    }
+
+                    mMediaProjectionCallback = MediaProjectionCallback()
+                    mMediaProjection = mProjectionManager?.getMediaProjection(resultCode, data!!)
+                    mMediaProjection?.registerCallback(mMediaProjectionCallback, null)
+                    mVirtualDisplay = createVirtualDisplay()
+                }, mDelay)
                 _result.success(true)
                 return true
             } else {
+                mMediaRecorder?.release()
                 _result.success(false)
             }
         }
@@ -85,6 +102,11 @@ class FlutterScreenRecordingPlugin(
                 recordAudio = call.argument<Boolean?>("audio")
                 val width = call.argument<Int?>("width");
                 val height = call.argument<Int?>("height");
+                val delay = call.argument<Long?>("delayDuration");
+                delay?.let{
+                    mDelay = delay;
+                }
+
                 calculeResolution(width, height);
                 initMediaRecorder();
                 startRecordScreen()
@@ -136,18 +158,7 @@ class FlutterScreenRecordingPlugin(
 
     fun initMediaRecorder() {
         mMediaRecorder?.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-        // This has to come before setOutputFormat
-        if (recordAudio!!) {
-            mMediaRecorder?.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        }
-
-        mMediaRecorder?.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-
-        if (recordAudio!!) {
-            mMediaRecorder?.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);//AAC //HE_AAC
-            mMediaRecorder?.setAudioEncodingBitRate(16 * 44100);
-            mMediaRecorder?.setAudioSamplingRate(44100);
-        }
+        initAudioRecorder()
 
         mMediaRecorder?.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
 
@@ -163,19 +174,23 @@ class FlutterScreenRecordingPlugin(
         mMediaRecorder?.prepare()
     }
 
-    fun startRecordScreen() {
-        try {
-            //mMediaRecorder?.prepare()
-
-            mMediaRecorder?.start()
-
-        } catch (e: IOException) {
-            println("ERR");
-            Log.d("--INIT-RECORDER", "MediaProjection Start stop")
-            println("Error startRecordScreen")
-            println(e.message)
+    private fun initAudioRecorder() {
+        // This has to come before setOutputFormat
+        if (recordAudio!!) {
+            mMediaRecorder?.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         }
 
+        mMediaRecorder?.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+
+        if (recordAudio!!) {
+            mMediaRecorder?.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);//AAC //HE_AAC
+            mMediaRecorder?.setAudioEncodingBitRate(16 * 44100);
+            mMediaRecorder?.setAudioSamplingRate(44100);
+        }
+
+    }
+
+    fun startRecordScreen() {
         val permissionIntent = mProjectionManager?.createScreenCaptureIntent()
         ActivityCompat.startActivityForResult(registrar.activity()!!, permissionIntent!!, SCREEN_RECORD_REQUEST_CODE, null)
 
@@ -186,6 +201,7 @@ class FlutterScreenRecordingPlugin(
 
             mMediaRecorder?.stop()
             mMediaRecorder?.reset()
+            mMediaRecorder?.release();
             scanMedia();
             println("stopRecordScreen success")
 
@@ -208,8 +224,16 @@ class FlutterScreenRecordingPlugin(
         println("msurface " + mMediaRecorder?.getSurface())
         println("aaa" + mDisplayWidth.toString() + " " + mDisplayHeight);
 
-        return mMediaProjection?.createVirtualDisplay("MainActivity", mDisplayWidth, mDisplayHeight, mScreenDensity,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, mMediaRecorder?.getSurface(), null, null)
+        return mMediaProjection?.createVirtualDisplay(
+            "MainActivity",
+            mDisplayWidth,
+            mDisplayHeight,
+            mScreenDensity,
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+            mMediaRecorder?.getSurface(),
+            null,
+            null
+        )
     }
 
     private fun stopScreenSharing() {
